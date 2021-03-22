@@ -8,11 +8,21 @@ Created on Tue Mar 16 14:46:57 2021
 
 from lorenz import *
 from ana import *
+from obs import *
 
 
 dt = 0.01 # temporal discretisation
 parameters = [10.,11.,5.] # true parameters of the model
 n_simul = 30 # number of iteration of the simulation
+
+# background state
+Xb = np.array([0.,0.,0.])
+# background covariance error matrix
+sigma_b = 1.
+Pb = sigma_b*np.eye(3)
+# observation covariance error matrix
+sigma_y = 0.01
+R = sigma_y*np.eye(3)
 
 condi_ini = np.array([1.,3.,2.]) # initial condition
 
@@ -45,3 +55,10 @@ print('test adjoint ok :',round(prod1,8)==round(prod2,8))
 print('\n')
 
 # test grad, need to tend to one
+
+
+
+
+
+
+
