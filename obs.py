@@ -41,9 +41,9 @@ class Observation :
             
             if self.isobserved(t) :
                 
-                self.obs[t] = np.copy(model_ref.xvar_series[k]) # add the observation
+                self.obs[round(t,5)] = np.copy(model_ref.xvar_series[k]) # add the observation
                 h = np.eye(3)
-                self.H[t] = h            
+                self.H[round(t,5)] = h        
         
             
         
@@ -62,7 +62,8 @@ class Observation :
         compute the innovation H.x-y for a specific observation
         '''
         if self.isobserved(t) :
-            return np.dot(self.H[t],u)-self.obs[t]
+            t_round = round(t,5)
+            return np.dot(self.H[t_round],u)-self.obs[t_round]
 
 
 
