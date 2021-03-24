@@ -21,14 +21,28 @@ Xb = np.array([0.,0.,0.])
 sigma_b = 1.
 Pb = sigma_b*np.eye(3)
 # observation covariance error matrix
-sigma_y = 0.01
+sigma_y = 0.1
 R = sigma_y*np.eye(3)
 
 condi_ini = np.array([1.,3.,2.]) # initial condition
 
 # model
 Lor = Model(dt,parameters,condi_ini,n_simul)
+Lor.forward(n_simul)
 
+# observation
+
+n_sub = 5 # number of iteration between two observation
+
+T_obs = [i*n_sub*dt for i in range(1,n_simul//n_sub)] # observation time
+
+Obs = Observation(T_obs,n_simul)
+
+Obs.gen_obs(Lor)
+
+# Variational
+
+Var = Variational(Xb,Pb,R,Lor,Obs)
 
 # test tan, need to tend to zero
 
@@ -56,9 +70,18 @@ print('\n')
 
 # test grad, need to tend to one
 
+print('test gradient :\n')
 
+X = np.array([1.5,2.,3.])
+# dx = np.ones(3)
 
+# coef = 1.
+# while coef > 1e-08 :
+#     #print((Var.cost(X+coef*dx)-Var.cost(X))/np.dot(Var.grad(X).T,coef*dx))
+#     print(Var.cost(X+coef*dx)-Var.cost(X))
+#     print(np.dot(Var.grad(X),coef*dx))
+#     coef = coef/10
 
-
+print(Var.grad(X))
 
 
