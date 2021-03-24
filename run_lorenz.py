@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 dt = 0.01 # temporal discretisation
 parameters = [10.,11.,5.] # true parameters of the model
-n_simul = 30 # number of iteration of the simulation
+n_simul = 300 # number of iteration of the simulation
 
 
 #########################
@@ -26,7 +26,7 @@ n_simul = 30 # number of iteration of the simulation
 #########################
 
 # background state
-Xb = np.array([8.,5.,5.])
+Xb = np.array([8.,1.,5.])
 # background covariance error matrix
 sigma_b = 1.
 Pb = sigma_b*np.eye(3)
@@ -54,7 +54,7 @@ Lor_back.forward(n_simul)
 #########################
 # observation parameter
 #########################
-n_sub = 5 # number of iteration between two observation
+n_sub = 50 # number of iteration between two observation
 
 T_obs = [i*n_sub*dt for i in range(1,n_simul//n_sub)]
 
@@ -86,7 +86,6 @@ print(f'cost of {res.x} :', Var.cost(res.x))
 
 
 
-
 #########################
 # Plot results
 #########################
@@ -113,13 +112,13 @@ plt.legend()
 plt.subplot(3,1,2) # plot y
 plt.plot(Lor_true.time_series,Lor_true.xvar_series[:,1],label='true state')
 plt.plot(Lor_true.time_series,Lor_ana.xvar_series[:,1],label='analysed')
-plt.plot(Lor_true.time_series,Lor_back.xvar_series[:,2],label='background state')
+plt.plot(Lor_true.time_series,Lor_back.xvar_series[:,1],label='background state')
 plt.plot(t_obs,Xobs[:,1],'o')
 plt.legend()
 
 plt.subplot(3,1,3) # plot z
 plt.plot(Lor_true.time_series,Lor_true.xvar_series[:,2],label='true state')
-plt.plot(Lor_true.time_series,Lor_ana.xvar_series[:,1],label='analysed')
+plt.plot(Lor_true.time_series,Lor_ana.xvar_series[:,2],label='analysed')
 plt.plot(Lor_true.time_series,Lor_back.xvar_series[:,2],label='background state')
 plt.plot(t_obs,Xobs[:,2],'o')
 plt.legend()
