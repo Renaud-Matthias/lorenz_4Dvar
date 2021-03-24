@@ -31,7 +31,7 @@ Xb = np.array([8.,5.,5.])
 sigma_b = 1.
 Pb = sigma_b*np.eye(3)
 # observation covariance error matrix
-sigma_y = 1
+sigma_y = 0.1
 R = sigma_y*np.eye(3)
 
 
@@ -76,19 +76,24 @@ Lor_ana = Model(dt,parameters,new_condi_ini,n_simul)
 
 Var = Variational(Xb, Pb, R, Lor_ana, Obs)
 
-res = minimize(Var.cost,new_condi_ini)
 
-Lor_ana.x0 = res.x
+res = minimize(Var.cost,np.zeros(3))
 
 print('true state, x =',condi_ini,
       '\nresult of the analyse : x =',res.x)
 
-Lor_ana.re_initiate()
+print(f'cost of {res.x} :', Var.cost(res.x))
+
+
 
 
 #########################
 # Plot results
 #########################
+
+Lor_ana.x0 = res.x
+
+Lor_ana.re_initiate()
 
 Lor_ana.forward(n_simul) # store assimilation trajectory
 
@@ -122,8 +127,4 @@ plt.legend()
 
 
 plt.show()
-
-#########################
-# plot cost function
-#########################
 

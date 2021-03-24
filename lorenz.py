@@ -37,14 +37,15 @@ class Model :
     def __repr__(self) :
         return f'coordinates , x: {self.xvar[0]}, y= {self.xvar[1]}, z: {self.xvar[2]}'
 
-    def rhs(self) :
+    def rhs(self,x=None) :
         '''
         return the temporal derivative of the position vector
          - xout : array(dx/dt,dy/dt,dz/dt)
         '''
         # allocation of xout
         xout = np.zeros(3)
-        x = self.xvar
+        if not np.all(x) :
+            x = self.xvar
         xout[0] = self.parameters[0]*(x[1]-x[0])
         xout[1] = x[0]*(self.parameters[1]-x[2])-x[1]
         xout[2] = x[0]*x[1]-self.parameters[2]*x[2]
@@ -57,7 +58,7 @@ class Model :
         the functions return the new coordinates after one time step
         '''
         xout = np.zeros(3) # allocate the output vectors
-        xout[:] = x + self.dt*self.rhs()
+        xout[:] = x + self.dt*self.rhs(x)
         self.time += self.dt # update time
         return xout
     

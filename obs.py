@@ -34,7 +34,7 @@ class Observation :
         
     def gen_obs(self,model_ref) :
         '''
-        generate the set of observation from the reference model
+        generate the set of observation from the reference model, it need to be forwarded (model_ref.forward(n))
         '''
         for k in range(self.n_simul) :
             t = model_ref.time_series[k]
