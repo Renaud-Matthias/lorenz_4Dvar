@@ -52,7 +52,7 @@ dx = np.ones(3)
 print('test tan model :\n')
 coef = 1.
 while coef > 1e-08 :
-    print(np.mean(Lor.step(X_state+coef*dx)-Lor.step(X_state)-Lor.step_tan(X_state,coef*dx)))
+    print((Lor.step(X_state+coef*dx)-Lor.step(X_state))/(Lor.step_tan(X_state,coef*dx)))
     coef = coef/10
 print('\n')
 
@@ -68,20 +68,16 @@ prod2 = np.dot(Lor.step_adj(X_state,Y),X)
 print('test adjoint ok :',round(prod1,8)==round(prod2,8))
 print('\n')
 
+
 # test grad, need to tend to one
 
 print('test gradient :\n')
 
-X = np.array([1.5,2.,3.])
-# dx = np.ones(3)
+X = np.array([10.,7.,2.1])
+dx = np.ones(3)
 
-# coef = 1.
-# while coef > 1e-08 :
-#     #print((Var.cost(X+coef*dx)-Var.cost(X))/np.dot(Var.grad(X).T,coef*dx))
-#     print(Var.cost(X+coef*dx)-Var.cost(X))
-#     print(np.dot(Var.grad(X),coef*dx))
-#     coef = coef/10
-
-print(Var.grad(X))
-
+coef = 1.
+while coef > 1e-8 :
+    print((Var.cost(X+coef*dx)-Var.cost(X))/np.dot(Var.grad(X).T,coef*dx))
+    coef = coef/10
 
