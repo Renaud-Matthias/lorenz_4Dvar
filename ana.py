@@ -39,9 +39,7 @@ class Variational :
         # observation cost
         Jo = 0.
         u = np.copy(X)
-        u_trj = [] # list to store the trajectory
         for it in range(self.M.n_iter) :
-            u_trj.append(u)
             if self.Obs.isobserved(self.M.time) :
                 miss = self.Obs.misfit(self.M.time,u) # H.x -y
                 Jo = Jo + np.dot(miss,np.dot(self.Rinv,miss))
@@ -51,7 +49,7 @@ class Variational :
     
     def grad(self,X) :
         '''
-        compute the gradient of the cost function at coordinates X
+        compute the gradient of the cost function at coordinates X using adjoint coding
         PARAMETERS :
          - X : size 3 array containing the coordinates (x,y,z) where the gradient has to be evaluated
         RETURN :
@@ -61,31 +59,36 @@ class Variational :
         self.M.re_initiate()
         # background cost
         b_er = X-self.Xb # background error
+        t_last = self.Obs.time_obs[-1] # time of last observation
+        dt = self.M.dt # time discretisation
         
         u = np.copy(X)
-        u_trj = [] # list to store the trajectory
-        # forward run to store the particle trajectory
-        for it in range(self.M.n_iter) :
+        u_trj = [u] # list to store the trajectory
+        # forward run to store the particle trajectory, stop at last observation
+        for t_it in (i for i in range(int(t_last/dt))) :
+            u = self.M.step(u) # forward step, u at iteration t_it+1
             u_trj.append(u)
-            if self.Obs.isobserved(self.M.time) :
-                miss = self.Obs.misfit(self.M.time,u) # H.x -y
-            u = self.M.step(u) # forward step
-        
-        t = self.Obs.time_obs[-1]
-        u_adj = self.Obs.H[t] @ inv(self.R) @ self.Obs.misfit(t,u)
+        # adjoint coding
+        t_adj = t_last - dt # time of last observation
+        u_adj = self.Obs.H[t_last].T @ self.Rinv @ self.Obs.misfit(t_last,u)
         # backward in time
-        for t in self.Obs.time_obs[:-1][::-1] :
-            u_adj = self.M.step_adj(X, u_adj)
-            if self.Obs.isobserved(t) :
-                inov = self.Obs.misfit(t)
-                
-                u_adj += self.Obs.H[t].T @ self.R.T @ inov
-        # u_adj is the gradient of the cpst function at X
-        u_adj += np.dot(inv(self.Pb),b_er)
+        while round(t_adj,5) > 0. :
+            u_adj = self.M.step_adj(u_trj[int(t_adj/dt)], u_adj) # adjoint step
+            if self.Obs.isobserved(t_adj) :
+                # observation term if it exist
+                inov = self.Obs.misfit(t_adj,u_trj[int(t_adj/dt)]) # inovation
+                u_adj += self.Obs.H[t_adj].T @ self.Rinv @ inov
+            t_adj -= dt
+            t_adj = round(t_adj,5)
         
+        # add eventual obs at time t=0
+        t_ini = 0.
+        if self.Obs.isobserved(t_ini) :
+            u_adj += self.Obs.H[t_ini].T @ self.R.T @ inov
+        # add background component
+        u_adj += np.dot(inv(self.Pb),b_er)
+        # u_adj is the gradient of the cpst function at X
         return u_adj
-
-
 
 
 
