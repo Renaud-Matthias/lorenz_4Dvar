@@ -73,9 +73,9 @@ class Model :
          - dxout : value of the perturbation (dx,dy,dz) at the next iteration
         '''
         dxout = np.zeros(3)
-        dxout[0] = self.dt*self.parameters[0]*(dx[1]-dx[0]) + dx[0]
-        dxout[1] = self.dt*((self.parameters[1]-x[2])*dx[0] + x[0]*dx[2])
-        dxout[2] = self.dt*(x[1]*dx[0]+x[0]*dx[1]) + (1-self.parameters[2])*dx[2]
+        dxout[0] = dx[0] + self.dt*self.parameters[0]*(dx[1]-dx[0])
+        dxout[1] = dx[1] + self.dt*((self.parameters[1]-x[2])*dx[0] - (dx[1]+x[0]*dx[2]))
+        dxout[2] = dx[2] + self.dt*(x[1]*dx[0]+x[0]*dx[1]-self.parameters[2]*dx[2])
         return dxout
     
     def step_adj(self,x,u_adj) :
@@ -88,10 +88,9 @@ class Model :
          - u_out : value of the vector lambda at next iteration
         '''
         u_out = np.zeros(3)
-        par = [self.parameters[i] for i in range(3)]
-        u_out[0] = (1-self.dt*par[0])*u_adj[0] + self.dt*(par[1]-x[2])*u_adj[1] + self.dt*x[1]*u_adj[2]
-        u_out[1] = self.dt*(par[0]*u_adj[0] + x[0]*u_adj[2])
-        u_out[2] = self.dt*x[0]*u_adj[1] + (1-par[2])*u_adj[2]
+        u_out[0] = u_adj[0] + self.dt*((self.parameters[1]-x[2])*u_adj[1]+x[1]*u_adj[2]-self.parameters[0]*u_adj[0])
+        u_out[1] = u_adj[1] + self.dt*(self.parameters[0]*u_adj[0]-u_adj[1]+x[0]*u_adj[2])
+        u_out[2] = u_adj[2] - self.dt*(x[0]*u_adj[1]+self.parameters[2]*u_adj[2])
         return u_out
 
 
