@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 dt = 0.01 # temporal discretisation
 parameters = [10.,11.,5.] # true parameters of the model
-n_simul = 300 # number of iteration of the simulation
+n_simul = 30 # number of iteration of the simulation
 
 
 #########################
@@ -54,7 +54,7 @@ Lor_back.forward(n_simul)
 #########################
 # observation parameter
 #########################
-n_sub = 50 # number of iteration between two observation
+n_sub = 5 # number of iteration between two observation
 
 T_obs = [i*n_sub*dt for i in range(1,n_simul//n_sub)]
 
@@ -77,7 +77,7 @@ Lor_ana = Model(dt,parameters,new_condi_ini,n_simul)
 Var = Variational(Xb, Pb, R, Lor_ana, Obs)
 
 
-res = minimize(Var.cost,np.zeros(3))
+res = minimize(Var.cost,np.zeros(3),jac=Var.grad)
 
 print('true state, x =',condi_ini,
       '\nresult of the analyse : x =',res.x)
