@@ -17,9 +17,10 @@ class Model :
          - dt : temporal discretisation, 0.01 s default
          - param : size 3 array contening the parameters sigma rho and beta
     '''
-    def __init__(self,dt,param,X0,n_iter) :
+    def __init__(self,dt,param,X0,n_iter,t0=0.) :
         self.n_iter = n_iter
-        self.dt = dt # time 
+        self.dt = dt # time
+        self.t0 = t0 # initial time
         # parameters of the model sigma, rho, beta in order
         self.parameters = param
         # initial condition
@@ -27,7 +28,7 @@ class Model :
         # simulation parameters
         
         # results storage
-        self.time = 0. # time of simulation
+        self.time = self.t0 # time of simulation
 
         self.time_series = [self.time] # time series
         self.xvar = np.copy(self.x0) # current position vector
@@ -95,11 +96,11 @@ class Model :
 
 
     
-    def forward(self,niter) :
+    def forward(self,niter,start=1) :
         '''
         run a niter iteration simulation of the lorenz system using a forward scheme
         '''
-        for i in range(1,niter) :
+        for i in range(start,start+niter-1) :
             self.xvar = self.step(self.xvar)
             self.xvar_series[i] = self.xvar
             self.time_series.append(self.time)
@@ -108,7 +109,7 @@ class Model :
         '''
         reinitiate the model, time = 0 and empty the time and positions series
         '''
-        self.time = 0.
+        self.time = self.t0
         self.time_series = [self.time]
         self.xvar[:] = self.x0
         self.xvar_series = np.zeros((self.n_iter,3))
