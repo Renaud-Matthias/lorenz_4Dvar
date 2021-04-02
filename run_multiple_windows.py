@@ -20,12 +20,12 @@ import matplotlib.pyplot as plt
 #########################
 
 dt = 0.01 # temporal discretisation
-parameters = [10.,11.,5.] # true parameters of the model
-X0 = np.array([10.,2.,2.])
+parameters = [12.,21.,4/3] # true parameters of the model
+X0 = np.array([10.,15.,4.])
 
 n_window = 30 # number of iteration contained in an assimilation window (need to be even)
 n_step = n_window//2 # number of iteration between two assimilation, the window cross each other
-n_assimil = 3 # number of assimilation windows
+n_assimil = 5 # number of assimilation windows
 n_simul = (1+n_assimil)*n_step # number of iteration of the simulation
 
 #########################
@@ -34,7 +34,7 @@ n_simul = (1+n_assimil)*n_step # number of iteration of the simulation
 
 # new parametrs for assimilation
 # delta for each parameters
-d_param = [0.5, 0.2, -1.] # d sigma, d rho, d beta
+d_param = [0., 0., 0.] # d sigma, d rho, d beta
 par_assimil = []
 for i in range(3) :
     new_param = parameters[i] + d_param[i]
@@ -84,7 +84,8 @@ x_res = ana_4Dvar(dt,par_assimil,n_window,Xb,Pb,R,Obs) # result of assimilation
 
 M_ana = Model(dt,par_assimil,x_res,n_simul) # result model
 M_ana.forward(n_step)
-x_start = M_ana.step(M_ana.xvar_series[n_step-1])
+x_start = M_ana.step(M_ana.xvar_series[n_step-1]) # background for second analysis
+
 
 for k in range(1,n_assimil) :
     T_obs = [i*n_sub*dt for i in range(0,int(n_window/n_sub))]
@@ -92,11 +93,17 @@ for k in range(1,n_assimil) :
     M_obs.forward(n_window) # run model
     Obs = Observation(T_obs,n_window)
     Obs.gen_obs(M_obs)
+    for t in M_obs.time_series :
+        if Obs.isobserved(t) :
+            print(t,True,Obs.obs[round(t,3)][0])
     # result of assimilation
-    M_ana.xvar = ana_4Dvar(dt,parameters,n_window,x_start,Pb,R,Obs) # result of assimilation
+    print(M_ana.xvar_series[0:16,0])
+    M_ana.xvar = ana_4Dvar(dt,par_assimil,n_window,x_start,Pb,R,Obs) # result of assimilation
     M_ana.xvar_series[k*n_step] = M_ana.xvar
+    print(M_ana.xvar_series[0:16,0])
     if k < n_assimil-1 :
         M_ana.forward(n_step+1,start=k*n_step+1) # solution on new assimilation window
+        # new background for next analysis
         x_start = M_ana.step(M_ana.xvar_series[(k+1)*n_step]) # starting point for next assimilation window
     else :
         M_ana.forward(n_window,start=k*n_step+1)
