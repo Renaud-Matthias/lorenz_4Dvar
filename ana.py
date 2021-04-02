@@ -81,14 +81,13 @@ class Variational :
             t_adj -= dt
             t_adj = round(t_adj,5)
         
-        # add eventual obs at time t=0
-        t_ini = 0.
+        # add eventual obs at initial time
+        t_ini = self.M.t0
         if self.Obs.isobserved(t_ini) :
-            u_adj += self.Obs.H[t_ini].T @ self.R.T @ inov
+            u_adj += self.Obs.H[t_ini].T @ self.Rinv @ inov
         # add background component
         u_adj += np.dot(inv(self.Pb),b_er)
         # u_adj is the gradient of the cpst function at X
         return u_adj
-
 
 
