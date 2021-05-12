@@ -17,10 +17,11 @@ class Model :
          - dt : temporal discretisation, 0.01 s default
          - param : size 3 array contening the parameters sigma rho and beta
     '''
-    def __init__(self,dt,param,X0,n_iter,t0=0.) :
+    def __init__(self,dt,param,X0,n_iter,t0=0.,scheme='euler') :
         self.n_iter = n_iter
         self.dt = dt # time
         self.t0 = t0 # initial time
+        self.scheme = scheme
         # parameters of the model sigma, rho, beta in order
         self.parameters = param
         # initial condition
@@ -37,10 +38,22 @@ class Model :
     
     def __repr__(self) :
         return f'coordinates , x: {self.xvar[0]}, y= {self.xvar[1]}, z: {self.xvar[2]}'
+    
+    def time_to_it(self,t) :
+        '''
+        convert time in iteration
+        '''
+        return int(round(t,3)/self.dt)
+    
+    def it_to_time(self,i) :
+        '''
+        convert iteration in time
+        '''
+        return self.dt * i
 
     def rhs(self,x=None) :
         '''
-        return the temporal derivative of the position vector
+        return the temporal derivative of the position vector, if no vector given, takes self.xvar
          - xout : array(dx/dt,dy/dt,dz/dt)
         '''
         # allocation of xout
@@ -58,10 +71,14 @@ class Model :
          - x : coordinate before the step
         the functions return the new coordinates after one time step
         '''
-        xout = np.zeros(3) # allocate the output vectors
-        xout[:] = x + self.dt*self.rhs(x)
-        self.time += self.dt # update time
-        return xout
+        if self.scheme == 'euler' :
+            return self.euler_step(x)
+        
+        elif self.scheme == 'RK4' :
+            return self.RK4_step(x)
+        
+        else :
+            print('not implemented yet')
     
     def step_tan(self,x,dx) :
         '''
@@ -100,7 +117,7 @@ class Model :
         '''
         run a niter iteration simulation of the lorenz system using a forward scheme
         '''
-        for i in range(start,start+niter-1) :
+        for i in range(start,start+niter) :
             self.xvar = self.step(self.xvar)
             self.xvar_series[i] = self.xvar
             self.time_series.append(self.time)
@@ -142,6 +159,30 @@ class Model :
         plt.subplot(3,1,3)
         plt.plot(self.time_series,xvar_array[:,2],label=Label)
         plt.show()
+    
+    def euler_step(self,x) :
+        xout = np.zeros(3) # allocate the output vector
+        xout[:] = x + self.dt*self.rhs(x)
+        self.time += self.dt # update time
+        return xout
+    
+    def RK4_step(self,x) :
+        '''
+        use a 4th order Runge-Kutta scheme 
+        '''
+        k1 = self.rhs(x)
+        k2 = self.rhs(x+0.5*self.dt*k1)
+        k3 = self.rhs(x+0.5*self.dt*k2)
+        k4 = self.rhs(x+self.dt*k3)
+        xout = x + (self.dt/6)*(k1+2*(k2+k3)+k4)
+        self.time += self.dt # update time
+        return xout
+    
+    def RK4_step_tan(self,x,dx) :
+        '''
+        tangent step with a RK4 scheme
+        '''
+        dxout = np.zeros(3)
     
     
     

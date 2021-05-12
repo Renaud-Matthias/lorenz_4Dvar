@@ -14,22 +14,26 @@ import random as rd
 
 class Observation :
     
-    def __init__(self,T,n_simul) :
+    def __init__(self,n_simul,n_sub,std=0.1) :
         '''
         Create a set of observation, each observation is on one coordinate only (random)
          INPUTS :
-             - T : list of time where observation are available
+             - iter_obs : list of iteration where observation are available
         '''
-        # list of all the time where an observation is available
-        self.time_obs = T
+        
+        # list of all iteration where observations are available
+        self.iter_obs = [i for i in range(0,n_simul,n_sub)]
+        
+        # standard deviation of the observation
+        self.std = std
         # is made and the value of the observation
         self.obs = {}
-        # dictionnary of array, key is time t and items the associated observation operator
+        # dictionnary of array, key is iteration i and items the associated observation operator
         self.H = {}
         # dictionnary containing the observation operators
         
         self.n_simul = n_simul
-        self.n_obs = len(T) # number of observation
+        self.n_obs = len(self.iter_obs) # number of observation
         
         
     def gen_obs(self,model_ref) :
@@ -37,33 +41,32 @@ class Observation :
         generate the set of observation from the reference model, it need to be forwarded (model_ref.forward(n))
         '''
         for k in range(self.n_simul) :
-            t = model_ref.time_series[k]
             
-            if self.isobserved(t) :
+            if self.isobserved(k) :
                 
-                self.obs[round(t,5)] = np.copy(model_ref.xvar_series[k]) # add the observation
+                self.obs[k] = np.copy(model_ref.xvar_series[k]) + np.random.normal(0.,self.std,3) # add the observation
                 h = np.eye(3)
-                self.H[round(t,5)] = h        
+                self.H[k] = h   
         
             
         
-        
-    def isobserved(self,t) :
+    def isobserved(self,i) :
         '''
-        return True if an observation is available at time t or false if not
+        return True if an observation is available at iteration i or false if not
         '''
-        if round(t,2) in self.time_obs :
+        if i in self.iter_obs :
             return True
         else :
             return False
         
-    def misfit(self,t,u) :
+    def misfit(self,i,u) :
         '''
         compute the innovation H.x-y for a specific observation
         '''
-        if self.isobserved(t) :
-            t_round = round(t,5)
-            return np.dot(self.H[t_round],u)-self.obs[t_round]
+        if self.isobserved(i) :
+            return np.dot(self.H[i],u)-self.obs[i]
+        else :
+            print(f'no observation available at iteration {i}')
 
 
 
