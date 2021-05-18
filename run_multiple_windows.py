@@ -8,10 +8,10 @@ Created on Mon Mar 29 15:54:38 2021
 
 from lorenz import *
 from obs import *
-from ana import *
-from windows import *
-import config as cfg
+from windows import assimil
+import diagnostic as diag
 import matplotlib.pyplot as plt
+import numpy as np
 
 # CONFIGURATION
 ###############################################################################
@@ -21,9 +21,9 @@ import matplotlib.pyplot as plt
 #########################
 
 
-dt = 0.01 # temporal discretisation
+dt = 0.005 # temporal discretisation
 parameters = [10.,28.,4/3] # true parameters of the model
-X0 = np.array([10.,15.,6.])
+X0 = np.array([-3.,2.,10.])
 
 # numerical scheme : euler,
 sch = 'euler'
@@ -32,7 +32,7 @@ sch = 'euler'
 # assimilation windows parameters
 n_window = 30 # number of iteration contained in an assimilation window (need to be even)
 n_step = n_window//2 # number of iteration between two assimilation, the window cross each other
-n_assimil = 5 # number of assimilation windows
+n_assimil = 7 # number of assimilation windows
 n_simul = (1+n_assimil)*n_step # number of iteration of the simulation
 
 
@@ -59,14 +59,6 @@ for i in range(3) :
 # initial background state
 Xb = np.array([8.,1.,5.])
 
-# background covariance error matrix
-sigma_b = 1.
-B = sigma_b*np.eye(3)
-
-# observation covariance error matrix
-sigma_y = 0.1
-R = sigma_y*np.eye(3)
-
 
 ###############################################################################
 
@@ -76,7 +68,7 @@ R = sigma_y*np.eye(3)
 # run assimilation
 #########################
 
-M_true,M_ana, Obs = assimil(n_window,n_step,n_assimil,n_simul,dt,parameters,par_assimil,n_sub,X0,Xb,B,R)
+M_true,M_ana, Obs = assimil(n_window,n_step,n_assimil,n_simul,dt,parameters,par_assimil,n_sub,X0,Xb)
 
 #########################
 # plot results
@@ -84,24 +76,36 @@ M_true,M_ana, Obs = assimil(n_window,n_step,n_assimil,n_simul,dt,parameters,par_
 
 time = [i*dt for i in range(n_simul)]
 time_obs = [i*dt for i in Obs.iter_obs]
+time_window = np.array([i*dt for i in range(0,n_simul-n_step,n_step)])
+
+name_coord = {0 : 'x',1 : 'y',2 : 'z'}
 
 observations = np.array(list(Obs.obs.values()))
 
-fig, ax = plt.subplots()
+coord = 2
 
-ax.plot(time,M_true.xvar_series[:,0])
-ax.plot(time,M_ana.xvar_series[:,0])
-ax.plot(time_obs,observations[:,0],'o')
+fig, ax = plt.subplots(figsize=(10,5))
 
-
-
-
-
-
-
-
+ax.plot(time,M_true.xvar_series[:,coord],label='true')
+ax.plot(time,M_ana.xvar_series[:,coord],label='ana')
+ax.plot(time_obs,observations[:,coord],'o')
+ax.vlines(time_window,ax.get_ylim()[0],ax.get_ylim()[1], linestyles='dashed')
+ax.set_ylabel(name_coord[coord])
+ax.set_xlabel('time, s')
+ax.legend()
 
 
+X_ref = np.copy(M_true.xvar_series)
+X = np.copy(M_ana.xvar_series)
+
+score = diag.SCORE(X_ref,X)
+score_wdw = np.array([score[i] for i in range(0,n_simul-n_step,n_step)])
+
+fig, ax = plt.subplots(figsize=(10,4))
+ax.plot(time,score)
+ax.plot(time_window,score_wdw,'o',color='red')
+ax.set_ylabel("score")
+ax.set_xlabel("time, s")
 
 
 
