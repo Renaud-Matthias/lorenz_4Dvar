@@ -10,9 +10,10 @@ from lorenz import *
 from obs import *
 from ana import *
 from scipy.optimize import minimize
+import numpy as np
 
 
-def assimil(n_window,n_step,n_assimil,n_simul,dt,param_true,param_assimil,n_sub,X0,Xb,B,R) :
+def assimil(n_window,n_step,n_assimil,n_simul,dt,param_true,param_assimil,n_sub,X0,Xb) :
     '''
     Run multiple assimilation window from time 0 to final time
     PARMETERS :
@@ -22,8 +23,6 @@ def assimil(n_window,n_step,n_assimil,n_simul,dt,param_true,param_assimil,n_sub,
         - n_simul , size of the simulation
         - n_sub , number of iterations between two observations
         - Xb , background state for first window
-        - B , background covariance error matrix
-        - R , observation covariance error matrix
     RETURNS :
         - M_true : true model with the true trajectory
         - M_ana : the model contening the analysed trajectory
@@ -34,15 +33,18 @@ def assimil(n_window,n_step,n_assimil,n_simul,dt,param_true,param_assimil,n_sub,
     
     # create obs operator
     Obs = create_Obs(M_true, n_simul, n_sub)
+    R = Obs.std*np.eye(3) # observation error covariance matrix
+    B = np.eye(3) # background error covariance matrix
     
     # create analysed model
     M_ana = Model(dt,param_assimil,Xb,n_simul)
     for k in range(0,n_assimil) :
-        print(f'\n** window {k} **\n')
+        print(f'\n** window {k+1} **\n')
         first_window = k==0 # indicate when first assimilation window is running
         if first_window :
             x_res = ana_4Dvar(dt,param_assimil,n_window,Xb=Xb,R=R,Obs=Obs)
         else :
+            Xb = np.copy(M_ana.xvar_series[k*n_step])
             x_res = ana_4Dvar(dt,param_assimil,n_window,Xb=Xb,R=R,B=B,Obs=Obs,i0=k*n_step)
         
         M_ana.xvar = x_res
@@ -76,7 +78,7 @@ def ana_4Dvar(dt,param,n_iter,Xb=None,B=None,R=None,Obs=None,i0=0) :
     M = Model(dt,param,np.ones(3),n_iter)
     Var = Variational(Xb=Xb,B=B,R=R,M=M,Obs=Obs,i0=i0)
     X0 = np.copy(Xb)
-    res = minimize(Var.cost,X0)#,jac=Var.grad)
+    res = minimize(Var.cost,X0,options={'disp':True})#,jac=Var.grad)
     return res.x
 
 
