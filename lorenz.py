@@ -8,7 +8,6 @@ Created on Tue Feb  2 10:20:39 2021
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 class Model :
     '''
@@ -17,7 +16,7 @@ class Model :
          - dt : temporal discretisation, 0.01 s default
          - param : size 3 array contening the parameters sigma rho and beta
     '''
-    def __init__(self,dt,param,X0,n_iter,t0=0.,scheme='euler') :
+    def __init__(self,dt,param,X0,n_iter,t0=0.,scheme='euler',test=False) :
         self.n_iter = n_iter
         self.dt = dt # time
         self.t0 = t0 # initial time
@@ -34,7 +33,10 @@ class Model :
         self.time_series = [self.time] # time series
         self.xvar = np.copy(self.x0) # current position vector
         self.xvar_series = np.zeros((self.n_iter,3)) # storage of every position for each time step
-        self.xvar_series[0][:] = self.x0 
+        self.xvar_series[0][:] = self.x0
+        
+        if test :
+            self.test_tan()
     
     def __repr__(self) :
         return f'coordinates , x: {self.xvar[0]}, y= {self.xvar[1]}, z: {self.xvar[2]}'
@@ -90,11 +92,12 @@ class Model :
         RETURN
          - dxout : value of the perturbation (dx,dy,dz) at the next iteration
         '''
-        dxout = np.zeros(3)
-        dxout[0] = dx[0] + self.dt*self.parameters[0]*(dx[1]-dx[0])
-        dxout[1] = dx[1] + self.dt*((self.parameters[1]-x[2])*dx[0] - (dx[1]+x[0]*dx[2]))
-        dxout[2] = dx[2] + self.dt*(x[1]*dx[0]+x[0]*dx[1]-self.parameters[2]*dx[2])
-        return dxout
+        if self.scheme == 'euler' :
+            return self.step_tan_euler(x, dx)
+        elif self.scheme == 'RK4' :
+            return self.step_tan_RK4(x, dx)
+        else :
+            print(f'{self.scheme} model not implemented')
     
     def step_adj(self,x,u_adj) :
         '''
@@ -132,57 +135,117 @@ class Model :
         self.xvar_series = np.zeros((self.n_iter,3))
         self.xvar_series[0][:] = self.x0 
 
-    
-    
-    def plot_3D(self) :
-        '''
-        plot a 3D image of the series of position of the particule
-        '''
-        fig = plt.figure(figsize=(8,8)) # create figure
-        ax = fig.gca(projection='3d')
-        xvar_array = np.array(self.xvar_series)
-        ax.plot(xvar_array[:,0], xvar_array[:,1], xvar_array[:,2])
-        # legend
-        ax.set_xlabel("X Axis")
-        ax.set_ylabel("Y Axis")
-        ax.set_zlabel("Z Axis")
-        ax.set_title("Lorenz Attractor")
-        plt.show()
-    
-    def plot_separate(self,Label=None) :
-        xvar_array = np.array(self.xvar_series)
-        renamatt # create figure
-        plt.subplot(3,1,1)
-        plt.plot(self.time_series,xvar_array[:,0],label=Label)
-        plt.subplot(3,1,2)
-        plt.plot(self.time_series,xvar_array[:,1],label=Label)
-        plt.subplot(3,1,3)
-        plt.plot(self.time_series,xvar_array[:,2],label=Label)
-        plt.show()
-    
+
+#####################
+# MODEL PROPAGATION #
+#####################
+
+# Euler scheme
+
     def euler_step(self,x) :
         xout = np.zeros(3) # allocate the output vector
         xout[:] = x + self.dt*self.rhs(x)
         self.time += self.dt # update time
         return xout
     
-    def RK4_step(self,x) :
+    def step_tan_euler(self,x,dx) :
         '''
-        use a 4th order Runge-Kutta scheme 
+        Step using the Jacobian of the model, a perturbation dx of the coordinates
+        propagates
+        PARAMETERS
+         - x : value of parameters (x,y,z) at the point considered (size 3 array)
+         - dx : value of the perturbation (dx,dy,dz) (size 3 array)
+        RETURN
+         - dxout : value of the perturbation (dx,dy,dz) at the next iteration
+        '''
+        dxout = np.zeros(3)
+        dxout[0] = dx[0] + self.dt*self.parameters[0]*(dx[1]-dx[0])
+        dxout[1] = dx[1] + self.dt*((self.parameters[1]-x[2])*dx[0] - (dx[1]+x[0]*dx[2]))
+        dxout[2] = dx[2] + self.dt*(x[1]*dx[0]+x[0]*dx[1]-self.parameters[2]*dx[2])
+        return dxout
+
+# RK4 scheme
+
+    def coef_RK4(self,x) :
+        '''
+        return the coef k1,k2,k3,k4 from the RK4 scheme
         '''
         k1 = self.rhs(x)
         k2 = self.rhs(x+0.5*self.dt*k1)
         k3 = self.rhs(x+0.5*self.dt*k2)
         k4 = self.rhs(x+self.dt*k3)
+        return k1,k2,k3,k4
+    
+    def RK4_step(self,x) :
+        '''
+        use a 4th order Runge-Kutta scheme 
+        '''
+        k1,k2,k3,k4 = self.coef_RK4(x)
         xout = x + (self.dt/6)*(k1+2*(k2+k3)+k4)
         self.time += self.dt # update time
         return xout
     
-    def RK4_step_tan(self,x,dx) :
+    def step_tan_RK4(self,x,dx) :
         '''
         tangent step with a RK4 scheme
         '''
-        dxout = np.zeros(3)
+        K1,K2,K3,K4 = self.jac_coef_RK4(x,dx)
+        dxout = dx + (self.dt/6)*(K1+ 2*K2 + 2*K3 + K4)
+        return dxout
     
     
-    
+    def jac_rhs(self,X,dX) :
+        '''
+        Return the jacobian*dX of the right hand side term of the lorenz equation
+        '''
+        xout = np.zeros(3)
+        sig,rho,bet = self.parameters[0],self.parameters[1],self.parameters[2]
+        xout[0] = sig*(dX[1] - dX[0])
+        xout[1] = (rho-X[2])*dX[0] - dX[1] - X[0]*dX[2]
+        xout[2] = X[1]*dX[0] - X[0]*dX[1] - bet*dX[2]
+        return xout
+
+    def jac_coef_RK4(self,X,dX) :
+        '''
+        Return the Jacobian.dX of the RK4 coefficient k1,k2,k3,k4 at coordinate X
+        '''
+        k1,k2,k3,k4 = self.coef_RK4(X)
+        # jacobian*dX of k1
+        K1 = self.jac_rhs(X,dX)
+        # jacobian*dX of k2
+        dK2 = dX + (self.dt/2)*K1
+        K2 = np.dot(self.jac_rhs(X+(self.dt/2)*k1),dK2)
+        # jacobian*dX of k3
+        dK3 = dX + (self.dt/2)*K2
+        K3 = np.dot(self.jac_rhs(X+(self.dt/2)*k2),dK3)
+        # jacobian*dX of k4
+        dK4 = dX + self.dt*K3
+        K4 = np.dot(self.jac_rhs(X+self.dt*k3),dK4)
+        return K1,K2,K3,K4
+
+
+#########################
+# TEST OF TANGENT MODEL #
+#########################
+
+
+    def test_tan(self) :
+        '''
+        test if the tangent model is accurate
+        '''
+        print('\n** TANGENT TEST **\npass if result tend to 0\n\nvalueof coef :\t result\n')
+        X = 10*np.random.random(3)
+        dX = np.random.random(3)
+        MX = self.step(X) # value of M(X) the model with coordinates X
+        coef = 1.
+        for i in range(10) :
+            MXdX, tanDX = self.step(X+coef*dX), self.step_tan(X,coef*dX)
+            res = abs(1 - np.linalg.norm(MXdX - MX)/np.linalg.norm(tanDX))
+            print(f'{coef:2E} : {res:2E}')
+            coef = 0.1*coef
+        
+
+
+
+
+
