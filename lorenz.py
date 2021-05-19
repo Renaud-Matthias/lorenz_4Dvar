@@ -37,6 +37,7 @@ class Model :
         
         if test :
             self.test_tan()
+            self.test_adj()
     
     def __repr__(self) :
         return f'coordinates , x: {self.xvar[0]}, y= {self.xvar[1]}, z: {self.xvar[2]}'
@@ -52,20 +53,7 @@ class Model :
         convert iteration in time
         '''
         return self.dt * i
-
-    def rhs(self,x=None) :
-        '''
-        return the temporal derivative of the position vector, if no vector given, takes self.xvar
-         - xout : array(dx/dt,dy/dt,dz/dt)
-        '''
-        # allocation of xout
-        xout = np.zeros(3)
-        if not np.all(x) :
-            x = self.xvar
-        xout[0] = self.parameters[0]*(x[1]-x[0])
-        xout[1] = x[0]*(self.parameters[1]-x[2])-x[1]
-        xout[2] = x[0]*x[1]-self.parameters[2]*x[2]
-        return xout
+    
     
     def step(self,x) :
         '''
@@ -97,7 +85,7 @@ class Model :
         elif self.scheme == 'RK4' :
             return self.step_tan_RK4(x, dx)
         else :
-            print(f'{self.scheme} model not implemented')
+            print(f'{self.scheme} tangent model not implemented')
     
     def step_adj(self,x,u_adj) :
         '''
@@ -108,11 +96,12 @@ class Model :
         RETURN
          - u_out : value of the vector lambda at next iteration
         '''
-        u_out = np.zeros(3)
-        u_out[0] = u_adj[0] + self.dt*((self.parameters[1]-x[2])*u_adj[1]+x[1]*u_adj[2]-self.parameters[0]*u_adj[0])
-        u_out[1] = u_adj[1] + self.dt*(self.parameters[0]*u_adj[0]-u_adj[1]+x[0]*u_adj[2])
-        u_out[2] = u_adj[2] - self.dt*(x[0]*u_adj[1]+self.parameters[2]*u_adj[2])
-        return u_out
+        if self.scheme == 'euler' :
+            return self.step_adj_euler(x, u_adj)
+        # elif self.scheme == 'RK4' :
+        #     return self.step_adj_RK4(x, u_adj)
+        else :
+            print(f'{self.scheme} adjoint model not implemented')
 
 
     
@@ -143,6 +132,9 @@ class Model :
 # Euler scheme
 
     def euler_step(self,x) :
+        '''
+        one step forward in the model from coordinates x using a euler scheme
+        '''
         xout = np.zeros(3) # allocate the output vector
         xout[:] = x + self.dt*self.rhs(x)
         self.time += self.dt # update time
@@ -163,18 +155,25 @@ class Model :
         dxout[1] = dx[1] + self.dt*((self.parameters[1]-x[2])*dx[0] - (dx[1]+x[0]*dx[2]))
         dxout[2] = dx[2] + self.dt*(x[1]*dx[0]+x[0]*dx[1]-self.parameters[2]*dx[2])
         return dxout
+    
+    def step_adj_euler(self,x,u_adj) :
+        '''
+        Adjoint step of the tangent model
+        PARAMETERS
+         - x : value of the coordinates at the point considered
+         - u_adj : value of the vector lambda
+        RETURN
+         - u_out : value of the vector lambda at next iteration
+        '''
+        u_out = np.zeros(3)
+        u_out[0] = u_adj[0] + self.dt*((self.parameters[1]-x[2])*u_adj[1]+x[1]*u_adj[2]-self.parameters[0]*u_adj[0])
+        u_out[1] = u_adj[1] + self.dt*(self.parameters[0]*u_adj[0]-u_adj[1]+x[0]*u_adj[2])
+        u_out[2] = u_adj[2] - self.dt*(x[0]*u_adj[1]+self.parameters[2]*u_adj[2])
+        return u_out
 
 # RK4 scheme
 
-    def coef_RK4(self,x) :
-        '''
-        return the coef k1,k2,k3,k4 from the RK4 scheme
-        '''
-        k1 = self.rhs(x)
-        k2 = self.rhs(x+0.5*self.dt*k1)
-        k3 = self.rhs(x+0.5*self.dt*k2)
-        k4 = self.rhs(x+self.dt*k3)
-        return k1,k2,k3,k4
+    
     
     def RK4_step(self,x) :
         '''
@@ -193,6 +192,39 @@ class Model :
         dxout = dx + (self.dt/6)*(K1+ 2*K2 + 2*K3 + K4)
         return dxout
     
+    def step_adj_RK4(self,x,u_adj) :
+        '''
+        Adjoint step using a RK4 scheme
+        '''
+
+    
+####################
+# UTILITARIAN TOOL #
+####################
+    
+    def rhs(self,x=None) :
+        '''
+        return the temporal derivative of the position vector, if no vector given, takes self.xvar
+         - xout : array(dx/dt,dy/dt,dz/dt)
+        '''
+        # allocation of xout
+        xout = np.zeros(3)
+        if not np.all(x) :
+            x = self.xvar
+        xout[0] = self.parameters[0]*(x[1]-x[0])
+        xout[1] = x[0]*(self.parameters[1]-x[2])-x[1]
+        xout[2] = x[0]*x[1]-self.parameters[2]*x[2]
+        return xout
+    
+    def coef_RK4(self,x) :
+        '''
+        return the coef k1,k2,k3,k4 from the RK4 scheme
+        '''
+        k1 = self.rhs(x)
+        k2 = self.rhs(x+0.5*self.dt*k1)
+        k3 = self.rhs(x+0.5*self.dt*k2)
+        k4 = self.rhs(x+self.dt*k3)
+        return k1,k2,k3,k4
     
     def jac_rhs(self,X,dX) :
         '''
@@ -222,18 +254,18 @@ class Model :
         dK4 = dX + self.dt*K3
         K4 = np.dot(self.jac_rhs(X+self.dt*k3),dK4)
         return K1,K2,K3,K4
-
-
+    
+    
 #########################
 # TEST OF TANGENT MODEL #
 #########################
-
-
+    
+    
     def test_tan(self) :
         '''
         test if the tangent model is accurate
         '''
-        print('\n** TANGENT TEST **\npass if result tend to 0\n\nvalueof coef :\t result\n')
+        print('\n** TANGENT TEST **\n\npass if result tend to 0\n\nvalue of coef :\t result :\n')
         X = 10*np.random.random(3)
         dX = np.random.random(3)
         MX = self.step(X) # value of M(X) the model with coordinates X
@@ -241,9 +273,23 @@ class Model :
         for i in range(10) :
             MXdX, tanDX = self.step(X+coef*dX), self.step_tan(X,coef*dX)
             res = abs(1 - np.linalg.norm(MXdX - MX)/np.linalg.norm(tanDX))
-            print(f'{coef:2E} : {res:2E}')
+            print(f'{coef:2E}\t:\t{res:2E}')
             coef = 0.1*coef
-        
+    
+    
+    def test_adj(self) :
+        '''
+        test the adjoint method, this test is only valid if the tangent test if verified
+        '''
+        print(f'\n** ADJOINT TEST **\n')
+        X = 10*np.random.random(3) # coordinates where tangent and adjoint model are evaluated
+        A , B = np.random.random(3), np.random.random(3)
+        prod1 = np.dot(self.step_tan(X,A),B)
+        prod2 = np.dot(self.step_adj(X,B),A)
+        test = round(prod1,8)==round(prod2,8)
+        print(f'result of test : {test}')
+        print(f'first scalar product : {round(prod1,5)} , second scalar product {round(prod2,5)}')
+        print(f'value of the difference : {prod1-prod2:2E}')
 
 
 
