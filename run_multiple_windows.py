@@ -26,8 +26,8 @@ parameters = [10.,28.,4/3] # true parameters of the model
 X0 = np.array([-3.,2.,10.])
 
 # numerical scheme : euler,
-sch = 'euler'
-# sch = 'RK3'
+# sch = 'euler'
+scheme = 'RK4'
 
 # assimilation windows parameters
 n_window = 30 # number of iteration contained in an assimilation window (need to be even)
@@ -68,7 +68,8 @@ Xb = np.array([8.,1.,5.])
 # run assimilation
 #########################
 
-M_true,M_ana, Obs = assimil(n_window,n_step,n_assimil,n_simul,dt,parameters,par_assimil,n_sub,X0,Xb)
+M_true,M_ana, Obs = assimil(n_window,n_step,n_assimil,n_simul,dt,parameters,\
+                            par_assimil,n_sub,X0,Xb,scheme=scheme)
 
 #########################
 # plot results

@@ -87,7 +87,7 @@ class Model :
         else :
             print(f'{self.scheme} tangent model not implemented')
     
-    def step_adj(self,x,u_adj) :
+    def step_adj(self,x,dx) :
         '''
         Adjoint step of the tangent model
         PARAMETERS
@@ -97,9 +97,9 @@ class Model :
          - u_out : value of the vector lambda at next iteration
         '''
         if self.scheme == 'euler' :
-            return self.step_adj_euler(x, u_adj)
-        # elif self.scheme == 'RK4' :
-        #     return self.step_adj_RK4(x, u_adj)
+            return self.step_adj_euler(x, dx)
+        elif self.scheme == 'RK4' :
+            return self.step_adj_RK4(x, dx)
         else :
             print(f'{self.scheme} adjoint model not implemented')
 
@@ -156,7 +156,7 @@ class Model :
         dxout[2] = dx[2] + self.dt*(x[1]*dx[0]+x[0]*dx[1]-self.parameters[2]*dx[2])
         return dxout
     
-    def step_adj_euler(self,x,u_adj) :
+    def step_adj_euler(self,x,dx) :
         '''
         Adjoint step of the tangent model
         PARAMETERS
@@ -165,10 +165,10 @@ class Model :
         RETURN
          - u_out : value of the vector lambda at next iteration
         '''
-        u_out = np.zeros(3)
-        u_out[0] = u_adj[0] + self.dt*((self.parameters[1]-x[2])*u_adj[1]+x[1]*u_adj[2]-self.parameters[0]*u_adj[0])
-        u_out[1] = u_adj[1] + self.dt*(self.parameters[0]*u_adj[0]-u_adj[1]+x[0]*u_adj[2])
-        u_out[2] = u_adj[2] - self.dt*(x[0]*u_adj[1]+self.parameters[2]*u_adj[2])
+        x_out = np.zeros(3)
+        x_out[0] = dx[0] + self.dt*((self.parameters[1]-x[2])*dx[1]+x[1]*dx[2]-self.parameters[0]*u_adj[0])
+        x_out[1] = dx[1] + self.dt*(self.parameters[0]*dx[0]-dx[1]+x[0]*dx[2])
+        x_out[2] = dx[2] - self.dt*(x[0]*dx[1]+self.parameters[2]*dx[2])
         return u_out
 
 # RK4 scheme
@@ -192,10 +192,14 @@ class Model :
         dxout = dx + (self.dt/6)*(K1+ 2*K2 + 2*K3 + K4)
         return dxout
     
-    def step_adj_RK4(self,x,u_adj) :
+    def step_adj_RK4(self,x,dx) :
         '''
         Adjoint step using a RK4 scheme
         '''
+        K1T,K2T,K3T,K4T = self.adj_matrices_RK4(x)
+        xout = dx + (self.dt/6)*np.dot(K1T+2*K2T+2*K3T+K4T,dx)
+        return xout
+        
 
     
 ####################
@@ -215,7 +219,27 @@ class Model :
         xout[1] = x[0]*(self.parameters[1]-x[2])-x[1]
         xout[2] = x[0]*x[1]-self.parameters[2]*x[2]
         return xout
-    
+ 
+    def jac_rhs(self,X,dX) :
+        '''
+        Return the jacobian*dX of the right hand side term of the lorenz equation
+        '''
+        xout = np.zeros(3)
+        sig,rho,bet = self.parameters[0],self.parameters[1],self.parameters[2]
+        xout[0] = sig*(dX[1] - dX[0])
+        xout[1] = (rho-X[2])*dX[0] - dX[1] - X[0]*dX[2]
+        xout[2] = X[1]*dX[0] + X[0]*dX[1] - bet*dX[2]
+        return xout
+
+    def adj_rhs(self,X) :
+        '''
+        Return the adjoint of the tangent model at coordinate X
+        '''
+        sig,rho,bet = self.parameters[0],self.parameters[1],self.parameters[2]
+        adj_Mat = np.array([[-sig,rho-X[2],X[1]],[sig,-1,X[0]],[0,-X[0],-bet]])
+        return adj_Mat
+        
+
     def coef_RK4(self,x) :
         '''
         return the coef k1,k2,k3,k4 from the RK4 scheme
@@ -225,17 +249,6 @@ class Model :
         k3 = self.rhs(x+0.5*self.dt*k2)
         k4 = self.rhs(x+self.dt*k3)
         return k1,k2,k3,k4
-    
-    def jac_rhs(self,X,dX) :
-        '''
-        Return the jacobian*dX of the right hand side term of the lorenz equation
-        '''
-        xout = np.zeros(3)
-        sig,rho,bet = self.parameters[0],self.parameters[1],self.parameters[2]
-        xout[0] = sig*(dX[1] - dX[0])
-        xout[1] = (rho-X[2])*dX[0] - dX[1] - X[0]*dX[2]
-        xout[2] = X[1]*dX[0] - X[0]*dX[1] - bet*dX[2]
-        return xout
 
     def jac_coef_RK4(self,X,dX) :
         '''
@@ -246,14 +259,34 @@ class Model :
         K1 = self.jac_rhs(X,dX)
         # jacobian*dX of k2
         dK2 = dX + (self.dt/2)*K1
-        K2 = np.dot(self.jac_rhs(X+(self.dt/2)*k1),dK2)
+        K2 = self.jac_rhs(X+(self.dt/2)*k1,dK2)
         # jacobian*dX of k3
         dK3 = dX + (self.dt/2)*K2
-        K3 = np.dot(self.jac_rhs(X+(self.dt/2)*k2),dK3)
+        K3 = self.jac_rhs(X+(self.dt/2)*k2,dK3)
         # jacobian*dX of k4
         dK4 = dX + self.dt*K3
-        K4 = np.dot(self.jac_rhs(X+self.dt*k3),dK4)
+        K4 = self.jac_rhs(X+self.dt*k3,dK4)
         return K1,K2,K3,K4
+    
+    def adj_matrices_RK4(self,X) :
+        '''
+        Return the adjoint.dX of the RK4 jacobian matrices associated
+        to coefficients k1,k2,k3,k4 at coordinate X
+        '''
+        k1,k2,k3,k4 = self.coef_RK4(X)
+        # first matrix adjoint K1T
+        K1T = self.adj_rhs(X)
+        # second matrix adjoint K2T
+        RHS1 = self.adj_rhs(X+0.5*self.dt*k1)
+        K2T = np.dot(np.eye(3)+0.5*self.dt*K1T,RHS1)
+        # second matrix adjoint K2T
+        RHS2 = self.adj_rhs(X+0.5*self.dt*k2)
+        K3T = np.dot(np.eye(3)+0.5*self.dt*K2T,RHS2)
+        # second matrix adjoint K2T
+        RHS4 = self.adj_rhs(X+self.dt*k3)
+        K4T = np.dot(np.eye(3)+self.dt*K3T,RHS4)
+        return K1T,K2T,K3T,K4T
+        
     
     
 #########################

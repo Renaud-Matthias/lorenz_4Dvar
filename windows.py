@@ -13,7 +13,7 @@ from scipy.optimize import minimize
 import numpy as np
 
 
-def assimil(n_window,n_step,n_assimil,n_simul,dt,param_true,param_assimil,n_sub,X0,Xb) :
+def assimil(n_window,n_step,n_assimil,n_simul,dt,param_true,param_assimil,n_sub,X0,Xb,scheme=None) :
     '''
     Run multiple assimilation window from time 0 to final time
     PARMETERS :
@@ -28,7 +28,7 @@ def assimil(n_window,n_step,n_assimil,n_simul,dt,param_true,param_assimil,n_sub,
         - M_ana : the model contening the analysed trajectory
     '''
     # create and run true model
-    M_true = Model(dt,param_true,X0,n_simul)
+    M_true = Model(dt,param_true,X0,n_simul,scheme=scheme)
     M_true.forward(n_simul-1)
     
     # create obs operator
