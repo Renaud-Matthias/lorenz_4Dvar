@@ -5,10 +5,12 @@ Created on Mon Mar 29 15:54:38 2021
 
 @author: renamatt
 """
+import sys
+sys.path.append('../')
 
-from lorenz import *
-from obs import *
-from windows import assimil
+from src import lorenz as lor
+from src import obs
+from src import windows as wdw
 import diagnostic as diag
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,7 +23,7 @@ import numpy as np
 #########################
 
 
-dt = 0.005 # temporal discretisation
+dt = 0.01 # temporal discretisation
 parameters = [10.,28.,4/3] # true parameters of the model
 X0 = np.array([-3.,2.,10.])
 
@@ -50,7 +52,7 @@ n_sub = 5 # number of iteration between two observations
 
 # new parametrs for assimilation
 # delta for each parameters
-d_param = [0., 0., 0.] # d sigma, d rho, d beta
+d_param = [0., 0., 0.5] # d sigma, d rho, d beta
 par_assimil = []
 for i in range(3) :
     new_param = parameters[i] + d_param[i]
@@ -68,12 +70,17 @@ Xb = np.array([8.,1.,5.])
 # run assimilation
 #########################
 
-M_true,M_ana, Obs = assimil(n_window,n_step,n_assimil,n_simul,dt,parameters,\
+M_true,M_ana, Obs = wdw.assimil(n_window,n_step,n_assimil,n_simul,dt,parameters,\
                             par_assimil,n_sub,X0,Xb,scheme=scheme)
 
 #########################
 # plot results
 #########################
+
+var_to_plot = 'x' # x,y or z
+
+dict_coord = {'x':0,'y':1,'z':2}
+coord = dict_coord[var_to_plot]
 
 time = [i*dt for i in range(n_simul)]
 time_obs = [i*dt for i in Obs.iter_obs]
@@ -105,6 +112,7 @@ score_wdw = np.array([score[i] for i in range(0,n_simul-n_step,n_step)])
 fig, ax = plt.subplots(figsize=(10,4))
 ax.plot(time,score)
 ax.plot(time_window,score_wdw,'o',color='red')
+ax.set_ylim(bottom=0.8)
 ax.set_ylabel("score")
 ax.set_xlabel("time, s")
 

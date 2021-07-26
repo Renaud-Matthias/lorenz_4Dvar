@@ -161,15 +161,15 @@ class Model :
         Adjoint step of the tangent model
         PARAMETERS
          - x : value of the coordinates at the point considered
-         - u_adj : value of the vector lambda
+         - dx : value of the perturbation (dx,dy,dz) (size 3 array)
         RETURN
-         - u_out : value of the vector lambda at next iteration
+         - x_out : return value, adjoint propagation of dx at coordinate x
         '''
         x_out = np.zeros(3)
-        x_out[0] = dx[0] + self.dt*((self.parameters[1]-x[2])*dx[1]+x[1]*dx[2]-self.parameters[0]*u_adj[0])
+        x_out[0] = dx[0] + self.dt*((self.parameters[1]-x[2])*dx[1]+x[1]*dx[2]-self.parameters[0]*dx[0])
         x_out[1] = dx[1] + self.dt*(self.parameters[0]*dx[0]-dx[1]+x[0]*dx[2])
         x_out[2] = dx[2] - self.dt*(x[0]*dx[1]+self.parameters[2]*dx[2])
-        return u_out
+        return x_out
 
 # RK4 scheme
 
@@ -322,7 +322,7 @@ class Model :
         test = round(prod1,8)==round(prod2,8)
         print(f'result of test : {test}')
         print(f'first scalar product : {round(prod1,5)} , second scalar product {round(prod2,5)}')
-        print(f'value of the difference : {prod1-prod2:2E}')
+        print(f'value of the difference : {prod1-prod2:2E}\n')
 
 
 
