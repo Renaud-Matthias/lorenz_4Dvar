@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Feb 24 13:52:56 2021
-
 @author: Matthias
+
+run a lorenz model without data assimilation
 """
 
-from lorenz import *
-from obs import *
-from ana import *
+import sys
+sys.path.append('../src/')
+
+from lorenz import Model
+import obs
+import ana
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
+
+import numpy as np
 
 #########################
 # parameter of simulation
@@ -58,7 +63,7 @@ n_sub = 5 # number of iteration between two observation
 
 T_obs = [i*n_sub*dt for i in range(1,n_simul//n_sub)]
 
-Obs = Observation(T_obs,n_simul)
+Obs = obs.Observation(T_obs,n_simul)
 
 Obs.gen_obs(Lor_true)
 
@@ -74,7 +79,7 @@ new_condi_ini = condi_ini + delta_x
 # analysed model
 Lor_ana = Model(dt,parameters,new_condi_ini,n_simul)
 
-Var = Variational(Xb, Pb, R, Lor_ana, Obs)
+Var = ana.Variational(Xb, Pb, R, Lor_ana, Obs)
 
 
 res = minimize(Var.cost,np.zeros(3),jac=Var.grad)

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Feb  2 10:20:39 2021
-
 @author: Matthias
 """
 
@@ -12,17 +10,23 @@ import matplotlib.pyplot as plt
 class Model :
     '''
     simulate a Lorenz system for one set of initial condition
-     INPUTS :
-         - dt : temporal discretisation, 0.01 s default
-         - param : size 3 array contening the parameters sigma rho and beta
+    Inputs :
+        - dt : float, time step in s
+        - t_simu : float, simulation time
+        - param : ndarray, 1d ndarray with shape (3,) containing floats, parameters sigma rho and beta, floats
+        - X0 : ndarray, array with shape (3,) containing floats, initial coordinates x,y,z
+        - scheme : str, scheme used for propagation, options are euler, RK4, default is euler
+        - test : bool, if true, tangent and adjoint tests are assessed
     '''
-    def __init__(self,dt,param,X0,n_iter,t0=0.,scheme='euler',test=False) :
-        self.n_iter = n_iter
+    def __init__(self,dt,t_simu,param,X0,t0=0.,scheme='euler',test=False) :
         self.dt = dt # time
         self.t0 = t0 # initial time
-        self.scheme = scheme
+        self.n_iter = int(t_simu/dt)
+        self.record = 0 # current record
+        self.t_end = self.t0 + t_simu # simulation end time
         # parameters of the model sigma, rho, beta in order
         self.parameters = param
+        self.scheme = scheme # numerical scheme for temporal derivative
         # initial condition
         self.x0 = X0
         # simulation parameters
@@ -105,11 +109,17 @@ class Model :
 
 
     
-    def forward(self,niter,start=1) :
+    def forward(self,n) :
         '''
-        run a niter iteration simulation of the lorenz system using a forward scheme
+        run a niter iteration simulation of the lorenz system
+        INPUTS :
+            - n : int, number of time step to propagate
         '''
-        for i in range(start,start+niter) :
+        i_start = self.record + 1
+        for i in range(i_start,i_start + n) :
+            if i == self.n_iter :
+                print(f'propagation stopped, end time reached at iteration {i}')
+                break
             self.xvar = self.step(self.xvar)
             self.xvar_series[i] = self.xvar
             self.time_series.append(self.time)
@@ -128,8 +138,6 @@ class Model :
 #####################
 # MODEL PROPAGATION #
 #####################
-
-# Euler scheme
 
     def euler_step(self,x) :
         '''
@@ -286,9 +294,7 @@ class Model :
         RHS4 = self.adj_rhs(X+self.dt*k3)
         K4T = np.dot(np.eye(3)+self.dt*K3T,RHS4)
         return K1T,K2T,K3T,K4T
-        
-    
-    
+
 #########################
 # TEST OF TANGENT MODEL #
 #########################
