@@ -23,7 +23,7 @@ import numpy as np
 
 dt = 0.01 # temporal discretisation
 parameters = [10.,11.,5.] # true parameters of the model
-n_simul = 30 # number of iteration of the simulation
+t_simu = 0.3 # number of iteration of the simulation
 
 
 #########################
@@ -46,15 +46,15 @@ R = sigma_y*np.eye(3)
 condi_ini = np.array([10.,5.,4.]) # initial condition
 
 # true model, reference
-Lor_true = Model(dt,parameters,condi_ini,n_simul)
-Lor_true.forward(n_simul)
+Lor_true = Model(dt,t_simu,parameters,condi_ini)
+Lor_true.forward(30)
 
 #########################
 # background model
 #########################
 
-Lor_back = Model(dt,parameters,Xb,n_simul)
-Lor_back.forward(n_simul)
+Lor_back = Model(dt,t_simu,parameters,Xb)
+Lor_back.forward(30)
 
 #########################
 # observation parameter
