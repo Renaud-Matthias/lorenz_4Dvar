@@ -1,6 +1,6 @@
 # lorenz_4Dvar
 
-4D var assimilation introduction using a chaotic lorenz model.
+This repository contains files to launch a 4Dvar  assimilation using a chaotic lorenz model.
 
 ## lorenz model
 
