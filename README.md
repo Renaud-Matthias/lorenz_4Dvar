@@ -20,6 +20,6 @@ Variational assimilation methods where first developped with applications to wea
 The 4Dvar is a four-dimensional variational assimilation method. It considered that both observations and prior knowledge on the system (initial conditions) are characterized by errors which follow normal laws.
 The state of the system is described by the state vector $X$. The 4Dvar algorithm find the optimal state of the system that best fit both observations and previous kbowledge of the system by minimizing the cost function $J$ :
 
-$$J(X)=(X-X_{b})^{T}B^{-1}(X-X_{b})+\sum_{i}(y_{i}-H_{i}(x_{i}))^{T}R_{i}^{-1}(y_{i}-H_{i}(x_{i}))$
+$$J(X)=(X-X_{b})^{T}B^{-1}(X-X_{b})+\sum_{i}(y_{i}-H_{i}(x_{i}))^{T}R_{i}^{-1}(y_{i}-H_{i}(x_{i}))$$
 
 where $X_{b}$ is the background state. It corresponds to a prior knwoledge of the system. The $y_{i}$ are the observations and the $x_{i}$, the state of the model with for initial conditions $X$, at the time where the observation $y_{i}$ is available. $H_{i}$ is called the observation operator, it project the state of the model in the same space as the observations.
